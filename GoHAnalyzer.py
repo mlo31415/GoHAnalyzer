@@ -45,6 +45,12 @@ allPages = [f[:-4] for f in listdir(".") if isfile(join(".", f)) and os.path.spl
 # Both the key and the value will be cannonicized
 redirects={}
 
+# conSeries will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
+conSeries={}
+
+# people will be a dictionary. The key will be the pagename of the person and the value will be a list of recognitions
+people={}
+
 for pageName in allPages:
     # First, open the xml file and determine what type of page this is, and make lists
     #       An award page (note it in the awards list)
@@ -86,7 +92,15 @@ for pageName in allPages:
         # Not all pages tagged "convention" are convention-series pages. Convention-series pages contain a convention-series table.
         # Check if this is a convention-series
         # If it's a real convention-series, we add the convention name and page name to the list of conventions
-        if Fancy3Pages.FindConventionSeriesTable(pageText):
-            i=0
+        conlist=Fancy3Pages.FindConventionSeriesTable(pageText)
+        if conlist is not None:
+            conSeries[pageName]=conlist
+        continue
+
+    # We also want to create a list of people with their GoHships
+    if "pro" in tags or "fan" in tags:
+        reclist=Fancy3Pages.FindRecognition(pageText)
+        if reclist is not None:
+            people[pageName]=reclist
 i=0
 
