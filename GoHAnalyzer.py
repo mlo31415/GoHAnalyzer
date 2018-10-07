@@ -12,17 +12,19 @@
 #
 # This works entirely on a local copy of Fancy 3 as created by FancyDownloader
 
-from xmlrpc import client
 import xml.etree.ElementTree as ET
 import os
 from os import listdir
 from os.path import isfile, join
 import re as Regex
-import datetime
-import base64
-import time
 import WikidotHelpers
+import Fancy3Pages
 
+
+#=======================================================================================
+#=======================================================================================
+# Main function
+#=======================================================================================
 # Find out where the local copy of Fancy 3 is
 # Change the working directory to the destination of the downloaded wiki
 # The site is under Fancyclopedia/Python in a directiry named "site" which is parallel to the one containing this project.
@@ -51,17 +53,20 @@ for pageName in allPages:
     path=os.path.join("../site", pageName)
 
     # First, read the .txt file and see if this is a redirect.
-    f=open(path+".txt", "r")
-    lines=[l[:-1] for l in f.readlines()]   # Drop trailing "\n"
+    f=open(path+".txt", errors="ignore")
+    pageText=f.readlines()
+    f.close()
+    lines=[l.strip() for l in pageText]   # Drop trailing "\n"
     lines=[l for l in lines if len(l) > 0 and len(l.strip()) > 0]   # Drop empty lines
     if len(lines) == 0:
         continue
-    m=Regex.match(Regex.escape('\[\[module Redirect destination="(.+)"\]\]'), lines[0])
+    m=Regex.match('\[\[module Redirect destination="(.+)"\]\]', lines[0])
     if m is not None and len(m.groups()) > 0:
         redirects[pageName]=WikidotHelpers.Cannonicize(m.groups()[0])
         continue
 
-    # Not a redirect
+    # Not a redirect. See if it is tagged.
+    # If it isn't tagged, then we can skip it.
     tagsEl=ET.ElementTree().parse(path+".xml").find("tags")
     if tagsEl is None:
         continue
@@ -71,6 +76,17 @@ for pageName in allPages:
     tags=[]
     for el in tagElList:
         tags.append(el.text)
-    i=0
 
+    # We need a list of conventions-series.  A convention-series is a group of conventions (e.g., Boskone, Confusion, Worldcon)
+    # For each convention-series, we'll build up a list of conventions from the table on the convention-series page
+    # TODO: We need to handle the one-shot conventions
+    # TODO: We need to handle the cases where there is a convention-series, but the individual conventions are also tagged "convention"
+    i=0
+    if "convention" in tags:
+        # Not all pages tagged "convention" are convention-series pages. Convention-series pages contain a convention-series table.
+        # Check if this is a convention-series
+        # If it's a real convention-series, we add the convention name and page name to the list of conventions
+        if Fancy3Pages.FindConventionSeriesTable(pageText):
+            i=0
 i=0
+
