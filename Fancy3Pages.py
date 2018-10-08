@@ -73,44 +73,54 @@ def FindConventionSeriesTable(pageText):
 
 
 #----------------------------------------------------------
-# Scan a Fancy 3 page looking for a recognition list.
+# Scan a Fancy 3 page looking for a recognition block.
 # This page should be a people page
 # A recognition list is one or more items of the format * <date> -- <comma separated list of pages>
 def FindRecognition(pageText):
     recognition=[]
-
-    # First look for the "[[include recognition]]" line
-    i=0
+    recFound=False
+    i=2 # Recognition can never start on the first two lines.
     while i < len(pageText):
-        if pageText[i] == "[[include recognition]]\n":
-            break
+        rec=DecodeRecognitionLine(pageText[i])
+        if rec is None:  # If this is not a recognition line, then it's either before the beginning of the recognition block or after its end
+            if recFound:
+                return recognition  # The block has teminated
+            else:
+                i=i+1
+                continue  # No block has been found yet, continue searching
+        recFound=True
+        recognition.append(rec)
         i=i+1
 
-    if i < len(pageText):
-        while i < len(pageText):
-            # We found it.  The following lines will be recognition lines
-            m=Regex.match('\* (\d{4}) -- (.*)', pageText[i])
-            if m is not None and len(m.groups()) > 0:
-                year=m.groups(0)[0]
-                list=m.groups(0)[1]
-
-                # Now split the list of recognition items by commas and then analyse each of them in turm
-                listitems=list.split(",")
-                for item in listitems:
-                    item=item.strip()
-                    m=Regex.match('\[\[\[(.*)\]\]\]', item)     # Look for [[[<something>[]]]
-                    if m is not None and len(m.groups()) > 0:
-                        recognition.append((m.groups(0)[0], year))
-                        continue
-                    m=Regex.match('Toastmaster at \[\[\[(.*)\]\]\]', item)
-                    if m is not None and len(m.groups()) > 0:
-                        recognition.append((m.groups(0)[0], year))
-                        continue
-                    m=Regex.match('MC at \[\[\[(.*)\]\]\]', item)
-                    if m is not None and len(m.groups()) > 0:
-                        recognition.append((m.groups(0)[0], year))
-                        continue
-            i=i+1
     return recognition
 
 
+def DecodeRecognitionLine(line):
+    # Is this a recognition line?
+    m=Regex.match('^\* (\d{4}) -- (.*)', line)
+    if m is None or len(m.groups()) == 0:
+        return None
+
+    # It appears that we have found a recognition line
+    year=m.groups(0)[0]
+    list=m.groups(0)[1]
+    # Some recognition items are bolded. so remove all instances of "**"
+    list=list.replace("**", "")
+    # Now split the list of recognition items by commas and then analyse each of them in turn
+    listitems=list.split(",")
+    recognition=[]
+    for item in listitems:
+        item=item.strip()
+        m=Regex.match('\[\[\[(.*)\]\]\]', item)  # Look for [[[<something>[]]]
+        if m is not None and len(m.groups()) > 0:
+            recognition.append((m.groups(0)[0], year))
+            continue
+        m=Regex.match('Toastmaster at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
+            recognition.append((m.groups(0)[0], year))
+            continue
+        m=Regex.match('MC at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
+            recognition.append((m.groups(0)[0], year))
+            continue
+    return recognition
