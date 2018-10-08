@@ -51,6 +51,9 @@ conSeries={}
 # people will be a dictionary. The key will be the pagename of the person and the value will be a list of recognitions
 people={}
 
+# awards will be a list of award pages
+awards=[]
+
 for pageName in allPages:
     # First, open the xml file and determine what type of page this is, and make lists
     #       An award page (note it in the awards list)
@@ -95,6 +98,7 @@ for pageName in allPages:
         conlist=Fancy3Pages.FindConventionSeriesTable(pageText)
         if conlist is not None:
             conSeries[pageName]=conlist
+        print(pageName+":  Convention: "+str(conlist))
         continue
 
     # We also want to create a list of people with their GoHships
@@ -102,5 +106,14 @@ for pageName in allPages:
         reclist=Fancy3Pages.FindRecognition(pageText)
         if reclist is not None:
             people[pageName]=reclist
+        print(pageName+":  Recognition: "+str(reclist))
+        continue
+
+    # Maybe it's an award?
+    if "award" in tags:
+        awards.append(pageName)
+        print(pageName+":  Award")
+
+    i=0
 i=0
 

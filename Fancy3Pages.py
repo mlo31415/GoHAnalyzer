@@ -32,14 +32,13 @@ def ExtractPageName(cell):
     return None
 
 
-
-
 #----------------------------------------------------------
 # Scan a Fancy 3 page looking for a convention-series table
 # A convention-series table is the first table and the first column is "Convention"
 # Return a list of convention page names
 def FindConventionSeriesTable(pageText):
     conventionColumnHeaders=["convention"]
+
     # pageText is a list containing the lines in the page
     i=0
     while i < len(pageText):
@@ -71,3 +70,47 @@ def FindConventionSeriesTable(pageText):
             conventions.append(pageName)
 
     return conventions
+
+
+#----------------------------------------------------------
+# Scan a Fancy 3 page looking for a recognition list.
+# This page should be a people page
+# A recognition list is one or more items of the format * <date> -- <comma separated list of pages>
+def FindRecognition(pageText):
+    recognition=[]
+
+    # First look for the "[[include recognition]]" line
+    i=0
+    while i < len(pageText):
+        if pageText[i] == "[[include recognition]]\n":
+            break
+        i=i+1
+
+    if i < len(pageText):
+        while i < len(pageText):
+            # We found it.  The following lines will be recognition lines
+            m=Regex.match('\* (\d{4}) -- (.*)', pageText[i])
+            if m is not None and len(m.groups()) > 0:
+                year=m.groups(0)[0]
+                list=m.groups(0)[1]
+
+                # Now split the list of recognition items by commas and then analyse each of them in turm
+                listitems=list.split(",")
+                for item in listitems:
+                    item=item.strip()
+                    m=Regex.match('\[\[\[(.*)\]\]\]', item)     # Look for [[[<something>[]]]
+                    if m is not None and len(m.groups()) > 0:
+                        recognition.append((m.groups(0)[0], year))
+                        continue
+                    m=Regex.match('Toastmaster at \[\[\[(.*)\]\]\]', item)
+                    if m is not None and len(m.groups()) > 0:
+                        recognition.append((m.groups(0)[0], year))
+                        continue
+                    m=Regex.match('MC at \[\[\[(.*)\]\]\]', item)
+                    if m is not None and len(m.groups()) > 0:
+                        recognition.append((m.groups(0)[0], year))
+                        continue
+            i=i+1
+    return recognition
+
+
