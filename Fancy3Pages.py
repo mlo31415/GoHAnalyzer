@@ -1,4 +1,8 @@
+import os
+from os import listdir
+from os.path import isfile, join
 import re as Regex
+import xml.etree.ElementTree as ET
 
 
 #----------------------------------------------------------
@@ -75,7 +79,7 @@ def FindConventionSeriesTable(pageText):
 #----------------------------------------------------------
 # Scan a Fancy 3 page looking for a recognition block.
 # This page should be a people page
-# A recognition list is one or more items of the format * <date> -- <comma separated list of pages>
+# A recognition list is one or more recognition lines.  It is of the form "* <date> -- <comma separated list of pages>"
 def FindRecognition(pageText):
     recognition=[]
     recFound=False
@@ -89,12 +93,19 @@ def FindRecognition(pageText):
                 i=i+1
                 continue  # No block has been found yet, continue searching
         recFound=True
-        recognition.append(rec)
+        recognition.extend(rec)
         i=i+1
 
     return recognition
 
 
+#----------------------------------------------------------
+# Decode a recognition line into a list of recognitions. The line is comma-delimited.
+# There are a number of recognition formats:
+#   [[[<convention>]]]
+#   [[[Best Blah Blah Hugo]]], [[[yyyy Best Blah Blah Hugo]]], [[[Best Blah Blah Hugo Award]]] (and probably others...)
+#   [[[<award>]]]
+#   [[[<award>]]] for [[[Best Blah]]]
 def DecodeRecognitionLine(line):
     # Is this a recognition line?
     m=Regex.match('^\* (\d{4}) -- (.*)', line)
@@ -104,23 +115,66 @@ def DecodeRecognitionLine(line):
     # It appears that we have found a recognition line
     year=m.groups(0)[0]
     list=m.groups(0)[1]
+
     # Some recognition items are bolded. so remove all instances of "**"
     list=list.replace("**", "")
+
     # Now split the list of recognition items by commas and then analyse each of them in turn
-    listitems=list.split(",")
+    # The commas need to be *outside* any [[[ ]]] since some conventions and awards have commas in their names
+    bracketCount=0
+    newlist=""
+    for c in list:
+        if c == "[":
+            bracketCount=bracketCount+1
+        elif c == "]":
+            bracketCount=bracketCount-1
+        elif c == "," and bracketCount == 0:
+            c="%%%"
+        newlist=newlist+c
+    listitems=newlist.split("%%%")
+
     recognition=[]
     for item in listitems:
         item=item.strip()
-        m=Regex.match('\[\[\[(.*)\]\]\]', item)  # Look for [[[<something>[]]]
+        m=Regex.match('^\[\[\[(.*?)\]\]\]', item)  # Look for [[[<something>[]]]. Note that we're ignoring everything after the first [[[ ]]]
         if m is not None and len(m.groups()) > 0:
             recognition.append((m.groups(0)[0], year))
             continue
-        m=Regex.match('Toastmaster at \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^Toastmaster at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             recognition.append((m.groups(0)[0], year))
             continue
-        m=Regex.match('MC at \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^MC at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             recognition.append((m.groups(0)[0], year))
             continue
+        print(">>>>Not recognized: "+item)
     return recognition
+
+
+#----------------------------------------------------------
+# Read a Fancy3 page into a list of lines
+def ReadPage(pageName):
+    global path, pageText, lines
+    path=os.path.join("../site", pageName)
+    # First, read the .txt file and see if this is a redirect.
+    f=open(path+".txt", errors="ignore")
+    pageText=f.readlines()
+    f.close()
+    lines=[l.strip() for l in pageText]  # Drop trailing "\n"
+    lines=[l for l in lines if len(l) > 0 and len(l.strip()) > 0]  # Drop empty lines
+    return lines
+
+# ----------------------------------------------------------
+# Read a page's tags
+def ReadTags(pageName):
+    tags=[]
+    tagsEl=ET.ElementTree().parse(path+".xml").find("tags")
+    if tagsEl is None:
+        return tags
+    tagElList=tagsEl.findall("tag")
+    if len(tagElList) == 0:
+        return tags
+    for el in tagElList:
+        tags.append(el.text)
+    return tags

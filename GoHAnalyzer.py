@@ -12,7 +12,6 @@
 #
 # This works entirely on a local copy of Fancy 3 as created by FancyDownloader
 
-import xml.etree.ElementTree as ET
 import os
 from os import listdir
 from os.path import isfile, join
@@ -44,9 +43,24 @@ allPages = [f[:-4] for f in listdir(".") if isfile(join(".", f)) and os.path.spl
 # Redirects will be a dictionary.  The key will be a name of a redirect page and the value will be what it redirects to.
 # Both the key and the value will be cannonicized
 redirects={}
+print("***Reading Redirects...")
+for pageName in allPages:
+    # First, open the xml file and determine what type of page this is, and make lists
+    #       An award page (note it in the awards list)
+    #       A convention page
 
-# conSeries will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
-conSeries={}
+    lines=Fancy3Pages.ReadPage(pageName)
+    if len(lines) == 0:
+        continue
+    m=Regex.match('\[\[module Redirect destination="(.+)"\]\]', lines[0])
+    if m is not None and len(m.groups()) > 0:
+        redirects[pageName]=WikidotHelpers.Cannonicize(m.groups()[0])
+        continue
+print("   "+str(len(redirects.keys()))+" redirects found")
+
+print("***Analyzing pages...")
+# conSerieses will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
+conSerieses={}
 
 # people will be a dictionary. The key will be the pagename of the person and the value will be a list of recognitions
 people={}
@@ -55,36 +69,23 @@ people={}
 awards=[]
 
 for pageName in allPages:
-    # First, open the xml file and determine what type of page this is, and make lists
+    # We have located all the redirects, so we don't need to look at them again.
+    if pageName in redirects.keys():
+        continue
+
+    # Open the xml file and determine what type of page this is, and make lists
     #       An award page (note it in the awards list)
     #       A convention page
 
-    path=os.path.join("../site", pageName)
-
-    # First, read the .txt file and see if this is a redirect.
-    f=open(path+".txt", errors="ignore")
-    pageText=f.readlines()
-    f.close()
-    lines=[l.strip() for l in pageText]   # Drop trailing "\n"
-    lines=[l for l in lines if len(l) > 0 and len(l.strip()) > 0]   # Drop empty lines
+    lines=Fancy3Pages.ReadPage(pageName)
     if len(lines) == 0:
         continue
-    m=Regex.match('\[\[module Redirect destination="(.+)"\]\]', lines[0])
-    if m is not None and len(m.groups()) > 0:
-        redirects[pageName]=WikidotHelpers.Cannonicize(m.groups()[0])
-        continue
 
-    # Not a redirect. See if it is tagged.
+    # See if it is tagged.
     # If it isn't tagged, then we can skip it.
-    tagsEl=ET.ElementTree().parse(path+".xml").find("tags")
-    if tagsEl is None:
+    tags=Fancy3Pages.ReadTags(pageName)
+    if len(tags) == 0:
         continue
-    tagElList=tagsEl.findall("tag")
-    if len(tagElList) == 0:  # No tags, must be a redirect or something else not interesting
-        continue
-    tags=[]
-    for el in tagElList:
-        tags.append(el.text)
 
     # We need a list of conventions-series.  A convention-series is a group of conventions (e.g., Boskone, Confusion, Worldcon)
     # For each convention-series, we'll build up a list of conventions from the table on the convention-series page
@@ -95,15 +96,15 @@ for pageName in allPages:
         # Not all pages tagged "convention" are convention-series pages. Convention-series pages contain a convention-series table.
         # Check if this is a convention-series
         # If it's a real convention-series, we add the convention name and page name to the list of conventions
-        conlist=Fancy3Pages.FindConventionSeriesTable(pageText)
+        conlist=Fancy3Pages.FindConventionSeriesTable(lines)
         if conlist is not None:
-            conSeries[pageName]=conlist
+            conSerieses[pageName]=conlist
         print(pageName+":  Convention: "+str(conlist))
         continue
 
     # We also want to create a list of people with their GoHships
     if "pro" in tags or "fan" in tags:
-        reclist=Fancy3Pages.FindRecognition(pageText)
+        reclist=Fancy3Pages.FindRecognition(lines)
         if reclist is not None:
             people[pageName]=reclist
         print(pageName+":  Recognition: "+str(reclist))
@@ -114,6 +115,25 @@ for pageName in allPages:
         awards.append(pageName)
         print(pageName+":  Award")
 
-    i=0
+# Now we need to take the list of conventions stored in conSerieses and build up a list of the GoHs.
+for conSeries in conSerieses:
+    for con in conSeries:
+        i=0
+
+# OK, we've gathered the data.
+# Take the awards data and remove awards from the recognition list
+for pname in people.keys():
+    reclist=people[pname]
+    newreclist=[]
+    for rec in reclist:
+        conname=rec[0].lower()
+        if WikidotHelpers.Cannonicize(conname) in awards:       # Drop recognitions which are an award
+            continue
+        if conname.find("hugo") > -1 and conname.find("best") > -1:     # Drop recognitions which are Hugo-related
+            continue
+        newreclist.append(rec)
+    people[pname]=newreclist
+
+# What we want to look at now are mismatches between the list of convention GoHs and the list of recognitions
 i=0
 

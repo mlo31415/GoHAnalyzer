@@ -18,6 +18,7 @@ def CannonicizeString(name):
             canName=canName[:-1]
     return canName
 
+#------------------------------------------------------------------
 # Take a raw name (mixed case, special characters, a potential category, etc.) and turn it into a properly formatted cannonicized name:
 #       Either "<category>:<name>" or, when there is no category, just "<name>"
 #       In both cases, the <> text is cannonicized
