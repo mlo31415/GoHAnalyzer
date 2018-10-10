@@ -41,3 +41,11 @@ def Cannonicize(pageNameZip):
         name=splitName[0]+":"+splitName[1]
 
     return canName
+
+
+#------------------------------------------------------------------
+# Change <stuff1>|<stuff2> to <stuff1>
+def RemoveAlias(s):
+    if "|" in s:
+        return s.split("|")[0]
+    return s

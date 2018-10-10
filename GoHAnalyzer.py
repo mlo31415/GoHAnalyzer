@@ -38,6 +38,7 @@ os.chmod(path, 0o777)
 # If there are attachments, they're in a folden named <name>. We don't need to look at that in this program
 
 # Create a list of the pages on the site by looking for .txt files and dropping the extension
+print("***Creating list of all pages")
 allPages = [f[:-4] for f in listdir(".") if isfile(join(".", f)) and os.path.splitext(f)[1] == ".txt"]
 
 # Redirects will be a dictionary.  The key will be a name of a redirect page and the value will be what it redirects to.
@@ -58,6 +59,15 @@ for pageName in allPages:
         continue
 print("   "+str(len(redirects.keys()))+" redirects found")
 
+print("***Checking redirects for loops")
+for key in redirects.keys():
+    val=key
+    while val in redirects.keys():
+        val=redirects[val]
+        if val == key:
+            print("######Loop in redirects: " + key)
+            break
+
 print("***Analyzing pages...")
 # conSerieses will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
 conSerieses={}
@@ -72,10 +82,7 @@ for pageName in allPages:
     # We have located all the redirects, so we don't need to look at them again.
     if pageName in redirects.keys():
         continue
-
-    # Open the xml file and determine what type of page this is, and make lists
-    #       An award page (note it in the awards list)
-    #       A convention page
+    # Note that we now can be sure that pageName is a fully redirected pagename
 
     lines=Fancy3Pages.ReadPage(pageName)
     if len(lines) == 0:
@@ -98,6 +105,7 @@ for pageName in allPages:
         # If it's a real convention-series, we add the convention name and page name to the list of conventions
         conlist=Fancy3Pages.FindConventionSeriesTable(lines)
         if conlist is not None:
+            conlist=[Fancy3Pages.RedirectedPage(redirects, c) for c in conlist]
             conSerieses[pageName]=conlist
         print(pageName+":  Convention: "+str(conlist))
         continue
@@ -105,6 +113,7 @@ for pageName in allPages:
     # We also want to create a list of people with their GoHships
     if "pro" in tags or "fan" in tags:
         reclist=Fancy3Pages.FindRecognition(lines)
+        reclist=[(Fancy3Pages.RedirectedPage(redirects, r[0]), r[1]) for r in reclist] # Make sure that we only use fully redirected names
         if reclist is not None:
             people[pageName]=reclist
         print(pageName+":  Recognition: "+str(reclist))

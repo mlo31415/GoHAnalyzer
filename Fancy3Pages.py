@@ -1,8 +1,16 @@
 import os
-from os import listdir
-from os.path import isfile, join
 import re as Regex
 import xml.etree.ElementTree as ET
+import WikidotHelpers
+
+
+#----------------------------------------------------------
+# Return the actual page taking redirects into account.
+def RedirectedPage(redirects, pagename):
+    pagename=WikidotHelpers.Cannonicize(pagename)
+    while pagename in redirects.keys():
+        pagename=WikidotHelpers.Cannonicize(redirects[pagename])
+    return pagename
 
 
 #----------------------------------------------------------
@@ -88,7 +96,7 @@ def FindRecognition(pageText):
         rec=DecodeRecognitionLine(pageText[i])
         if rec is None:  # If this is not a recognition line, then it's either before the beginning of the recognition block or after its end
             if recFound:
-                return recognition  # The block has teminated
+                return recognition  # The block has terminated
             else:
                 i=i+1
                 continue  # No block has been found yet, continue searching
@@ -138,15 +146,15 @@ def DecodeRecognitionLine(line):
         item=item.strip()
         m=Regex.match('^\[\[\[(.*?)\]\]\]', item)  # Look for [[[<something>[]]]. Note that we're ignoring everything after the first [[[ ]]]
         if m is not None and len(m.groups()) > 0:
-            recognition.append((m.groups(0)[0], year))
+            recognition.append((WikidotHelpers.RemoveAlias(m.groups(0)[0]), year))
             continue
         m=Regex.match('^Toastmaster at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
-            recognition.append((m.groups(0)[0], year))
+            recognition.append((WikidotHelpers.RemoveAlias(m.groups(0)[0]), year))
             continue
         m=Regex.match('^MC at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
-            recognition.append((m.groups(0)[0], year))
+            recognition.append((WikidotHelpers.RemoveAlias(m.groups(0)[0]), year))
             continue
         print(">>>>Not recognized: "+item)
     return recognition
