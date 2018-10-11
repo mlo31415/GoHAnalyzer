@@ -69,13 +69,14 @@ for key in redirects.keys():
             break
 
 print("***Analyzing pages...")
-# conSerieses will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
-conSerieses={}
+# conSeriesList will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
+conSeriesList={}
 
 # people will be a dictionary. The key will be the pagename of the person and the value will be a list of recognitions
 people={}
 
-# awards will be a list of award pages
+# awards and will be a list of pages
+fanfunds=[]
 awards=[]
 
 for pageName in allPages:
@@ -106,7 +107,7 @@ for pageName in allPages:
         conlist=Fancy3Pages.FindConventionSeriesTable(pageName, lines)
         if conlist is not None and len(conlist) > 0:
             conlist=[(Fancy3Pages.RedirectedPage(redirects, c[0]), c[1]) for c in conlist]
-            conSerieses[pageName]=conlist
+            conSeriesList[pageName]=conlist   # This is a list of tuples of convention-name and goh-list
         print(pageName+":  Convention: "+str(conlist))
         continue
 
@@ -121,17 +122,24 @@ for pageName in allPages:
 
     # Maybe it's an award?
     if "award" in tags:
-        awards.append(pageName)
+        awards.append(WikidotHelpers.Cannonicize(pageName))
         print(pageName+":  Award")
 
+    # Or a fan fund?
+    if "fandund" in tags:
+        fanfunds.append(WikidotHelpers.Cannonicize(pageName))
+        print(pageName+":  Fan Fund")
+
 # OK, we've gathered the data.
-# Take the awards data and remove awards from the recognition list
+# Take the awards and fanfund data and remove them from the recognition list
 for pname in people.keys():
     reclist=people[pname]
     newreclist=[]
     for rec in reclist:
         conname=rec[0].lower()
-        if WikidotHelpers.Cannonicize(conname) in awards:       # Drop recognitions which are an award
+        if WikidotHelpers.Cannonicize(conname) in awards:    # Drop recognitions which are an award
+            continue
+        if WikidotHelpers.Cannonicize(conname) in fanfunds:  # Drop recognitions which are a fanfund
             continue
         if conname.find("hugo") > -1 and conname.find("best") > -1:     # Drop recognitions which are Hugo-related
             continue
@@ -139,5 +147,14 @@ for pname in people.keys():
     people[pname]=newreclist
 
 # What we want to look at now are mismatches between the list of convention GoHs and the list of recognitions
-i=0
+# First we walk the list of people and make list all recognitions which are not found on the convention side
+for pkey in people.keys():
+    reclist=people[pkey]
+    for rec in reclist:
+        # A Rec is a tuple of a convention and a year
+        gohList=Fancy3Pages.LookUpGohList(conSeriesList, rec[0])
+        if gohList is None:
+            print("***Couldn't find "+rec[0]+ " in conSeriesList (person="+pkey+")")
+
+
 

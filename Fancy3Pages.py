@@ -66,10 +66,8 @@ def ExtractGohs(cell):
     # The above line should now be: [[[name 1]]][[[name 2]]][[[name 4]]]
     # Split it on the ]]][[[ and then remove the brackets
     out=out[3:-3]
-    return out.split("]]][[[")
-
-
-
+    out=out.split("]]][[[")
+    return [WikidotHelpers.Cannonicize(WikidotHelpers.RemoveAlias(o)) for o in out]
 
 
 #----------------------------------------------------------
@@ -77,7 +75,7 @@ def ExtractGohs(cell):
 # A convention-series table is the first table and the first column is "Convention"
 # Return a list of convention page names
 def FindConventionSeriesTable(conName, lines):
-    conventionColumnHeaders=["convention", "#"]
+    conventionColumnHeaders=["convention", "#", "con", "name"]
     gohColumnHeaders=["goh", "gohs", "guests of honor", "guests of honour"]
 
     i=0
@@ -114,8 +112,8 @@ def FindConventionSeriesTable(conName, lines):
         if pageName is None:
             continue
         cell=WikidotHelpers.GetCellContents(line, gohColumnNumber)
-        gohList=ExtractGohs(cell)
-        conventions.append((pageName, gohList))
+        gohList=ExtractGohs(cell)   # This is a list of GoHs for this convention
+        conventions.append((pageName, gohList))     # Making conventions a list of tuples of convention-name and goh-list
     return conventions
 
 
@@ -149,6 +147,7 @@ def FindRecognition(pageText):
 #   [[[Best Blah Blah Hugo]]], [[[yyyy Best Blah Blah Hugo]]], [[[Best Blah Blah Hugo Award]]] (and probably others...)
 #   [[[<award>]]]
 #   [[[<award>]]] for [[[Best Blah]]]
+#   Toastmaster/MC appearences are *not* recognitions for our purposes here
 def DecodeRecognitionLine(line):
     # Is this a recognition line?
     m=Regex.match('^\* (\d{4}) -- (.*)', line)
@@ -185,11 +184,15 @@ def DecodeRecognitionLine(line):
             continue
         m=Regex.match('^Toastmaster at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
-            recognition.append((WikidotHelpers.RemoveAlias(m.groups(0)[0]), year))
+            continue
+        m=Regex.match('^\[\[\[Toastmaster\]\]\] at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
             continue
         m=Regex.match('^MC at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
-            recognition.append((WikidotHelpers.RemoveAlias(m.groups(0)[0]), year))
+            continue
+        m=Regex.match('^\[\[\[MC\]\]\] at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
             continue
         print(">>>>Not recognized: "+item)
     return recognition
@@ -208,6 +211,7 @@ def ReadPage(pageName):
     lines=[l for l in lines if len(l) > 0 and len(l.strip()) > 0]  # Drop empty lines
     return lines
 
+
 # ----------------------------------------------------------
 # Read a page's tags
 def ReadTags(pageName):
@@ -222,3 +226,13 @@ def ReadTags(pageName):
         tags.append(el.text)
     return tags
 
+
+# ----------------------------------------------------------
+# Look up the GoH list for a specific convention by searching the Convention Series Dictionary
+def LookUpGohList(conventionSeriesList, conName):
+    for conSeriesName in conventionSeriesList.keys():
+        conSeries=conventionSeriesList[conSeriesName]
+        for con in conSeries:
+            if con[0] == conName:
+                return con[1]
+    return None
