@@ -49,3 +49,42 @@ def RemoveAlias(s):
     if "|" in s:
         return s.split("|")[0]
     return s
+
+
+#------------------------------------------------------------------
+# row is a row of a Wikidot table
+# Scan it looking for a cell containing str and return the index. str is a list of strings, and we return the first match
+def FindTextInRow(row, strs):
+
+    # Remove "~" which is found in header lines
+    row=row.replace("~", "")
+
+    # Split the line on "||", breaking it into individual cells
+    cells=row.split("||")
+
+    # convert to lower case and remove spaces and [[[]]]
+    cells=[c.lower().strip().replace("[[[", "").replace("]]]", "") for c in cells]
+    cells=cells[1:]   # The [1:] is to get rid of the pseudo-cell caused by the leading "||"
+
+    # And find the index
+    for s in strs:
+        if s.lower() in cells:
+            return cells.index(s.lower())
+
+    return None
+
+
+# ------------------------------------------------------------------
+# row is a row of a Wikidot table
+# Scan it looking for a cell containing str and return the index. str is a list of strings, and we return the first match
+def GetCellContents(row, index):
+    # Remove "~" which is found in header lines
+    row=row.replace("~", "")
+
+    # Split the line on "||", breaking it into individual cells
+    cells=row.split("||")[1:]   # The [1:] is to get rid of the pseudo-cell caused by the leading "||"
+
+    if index < len(cells):
+        return cells[index].strip()
+
+    return None

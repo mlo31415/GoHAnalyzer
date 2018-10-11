@@ -45,24 +45,54 @@ def ExtractPageName(cell):
 
 
 #----------------------------------------------------------
+# Take a line of GoHs and extract the hyperlinked names only.
+def ExtractGohs(cell):
+    # Basically, the cell contents looks something like this:
+    # [[[name 1]]], [[[name 2]]], name 3, [[[name 4]]], stuff
+    # Go through the line removing all text that is at the 0 level of bracketing
+    out=""
+    i=0
+    level=0
+    while i < len(cell):
+        c=cell[i]
+        if c == "[":
+            level=level+1
+        if level > 0:
+            out=out+c
+        if c == "]":
+            level=level-1
+        i=i+1
+
+    # The above line should now be: [[[name 1]]][[[name 2]]][[[name 4]]]
+    # Split it on the ]]][[[ and then remove the brackets
+    out=out[3:-3]
+    return out.split("]]][[[")
+
+
+
+
+
+#----------------------------------------------------------
 # Scan a Fancy 3 page looking for a convention-series table
 # A convention-series table is the first table and the first column is "Convention"
 # Return a list of convention page names
-def FindConventionSeriesTable(pageText):
-    conventionColumnHeaders=["convention"]
+def FindConventionSeriesTable(conName, lines):
+    conventionColumnHeaders=["convention", "#"]
+    gohColumnHeaders=["goh", "gohs", "guests of honor", "guests of honour"]
 
-    # pageText is a list containing the lines in the page
     i=0
-    while i < len(pageText):
+    while i < len(lines):
         # Find the header of the 1st column
         # Look for a leading "||~" which indicates the start of a table
-        header=FindFirstCellContents(pageText[i], "||~")
-        if header is None:
+        if lines[i].strip().find("||~") != 0:
             i=i+1
             continue
 
         # Does this table look like a convention-series table?
-        if header.lower() not in conventionColumnHeaders:
+        conventionColumnNumber=WikidotHelpers.FindTextInRow(lines[i], conventionColumnHeaders)
+        gohColumnNumber=WikidotHelpers.FindTextInRow(lines[i], gohColumnHeaders)
+        if conventionColumnNumber is None or gohColumnNumber is None:
+            print("###### Could not find convention series table in page "+conName)
             return None
         break
 
@@ -71,16 +101,18 @@ def FindConventionSeriesTable(pageText):
     # There should be one line per convention
     conventions=[]
     i=i+1   # Skip over the table header
-    while i < len(pageText):
-        line=pageText[i].strip()
+    while i < len(lines):
+        line=lines[i].strip()
         i=i+1
         if line[:2] != "||":    # Have we fallen off the bottom of the table?
             break
-        cell=FindFirstCellContents(line, "||")
+        cell=WikidotHelpers.GetCellContents(line, conventionColumnNumber)
         pageName=ExtractPageName(cell)
-        if pageName is not None:
-            conventions.append(pageName)
-
+        if pageName is None:
+            continue
+        cell=WikidotHelpers.GetCellContents(line, gohColumnNumber)
+        gohList=ExtractGohs(cell)
+        conventions.append((pageName, gohList))
     return conventions
 
 
@@ -186,3 +218,4 @@ def ReadTags(pageName):
     for el in tagElList:
         tags.append(el.text)
     return tags
+

@@ -103,9 +103,9 @@ for pageName in allPages:
         # Not all pages tagged "convention" are convention-series pages. Convention-series pages contain a convention-series table.
         # Check if this is a convention-series
         # If it's a real convention-series, we add the convention name and page name to the list of conventions
-        conlist=Fancy3Pages.FindConventionSeriesTable(lines)
-        if conlist is not None:
-            conlist=[Fancy3Pages.RedirectedPage(redirects, c) for c in conlist]
+        conlist=Fancy3Pages.FindConventionSeriesTable(pageName, lines)
+        if conlist is not None and len(conlist) > 0:
+            conlist=[(Fancy3Pages.RedirectedPage(redirects, c[0]), c[1]) for c in conlist]
             conSerieses[pageName]=conlist
         print(pageName+":  Convention: "+str(conlist))
         continue
@@ -123,11 +123,6 @@ for pageName in allPages:
     if "award" in tags:
         awards.append(pageName)
         print(pageName+":  Award")
-
-# Now we need to take the list of conventions stored in conSerieses and build up a list of the GoHs.
-for conSeries in conSerieses:
-    for con in conSeries:
-        i=0
 
 # OK, we've gathered the data.
 # Take the awards data and remove awards from the recognition list
