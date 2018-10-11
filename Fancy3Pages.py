@@ -92,7 +92,10 @@ def FindConventionSeriesTable(conName, lines):
         conventionColumnNumber=WikidotHelpers.FindTextInRow(lines[i], conventionColumnHeaders)
         gohColumnNumber=WikidotHelpers.FindTextInRow(lines[i], gohColumnHeaders)
         if conventionColumnNumber is None or gohColumnNumber is None:
-            print("###### Could not find convention series table in page "+conName)
+            if conventionColumnNumber is None:
+                print("###### Could not find convention column in series table in page "+conName)
+            if conventionColumnNumber is None or gohColumnNumber is None:
+                print("###### Could not find GoH column in series table in page "+conName)
             return None
         break
 
