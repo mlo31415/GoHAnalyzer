@@ -26,27 +26,47 @@ def FindFirstCellContents(line, delimiter):
 
 
 #----------------------------------------------------------
-# Extract a conventions page name from cell contents.
-# We must strip off the [[[]]] as well as get the page name, not the display name
-def ExtractPageName(cell):
-    cell=cell.strip()
-    # There are two valid patterns here:
-    #   [[[page-name]]]
-    #   [[[page-name|display-name]]]
-    m=Regex.match('\[\[\[(.+)\|(.+)\]\]\]', cell)
+# Extract a single name of the form [[[name]]] or [[[name|display-name]]]
+def ExtractOneConventionName(str):
+    m=Regex.match('^\[\[\[(.+)\|(.+)\]\]\]$', str)
     if m is not None and len(m.groups()) > 0:
         return m.groups(0)[0].strip()
 
-    m=Regex.match('\[\[\[(.+)\]\]\]', cell)
+    m=Regex.match('\[\[\[(.+)\]\]\]', str)
     if m is not None and len(m.groups()) > 0:
         return m.groups(0)[0].strip()
 
     return None
 
+#----------------------------------------------------------
+# Extract a conventions page name from cell contents.
+# We must strip off the [[[]]] as well as get the page name, not the display name
+# Sometimes the convention has multiple names and the entry is of the form [[[name1]]] / [[[name2]]] /...
+# We return a list of convention names
+def ExtractConventionName(cell):
+    cell=cell.strip()
+
+    # To handle multiple names separated by / we need to do some fancy footwork.
+    # There might be a '/' in a display name, so we can't just use a simple split().
+    # Remove spaces in ]]] / [[[ and then turn ]/[ into ]%%[ and then split on %%
+    cell.replace("  ", " ").replace("  ", " ").replace("]]] ", "]]]").replace(" [[[", "[[[").replace("]/[", "]%%[")
+    names=cell.split("%%")
+
+    # There are two valid patterns here:
+    #   [[[page-name]]]
+    #   [[[page-name|display-name]]]
+    # Loop through the splits and create an output list of convention names
+    connames=[ExtractOneConventionName(n) for n in names]
+    return [c for c in connames if c is not None]
+
 
 #----------------------------------------------------------
 # Take a line of GoHs and extract the hyperlinked names only.
 def ExtractGohs(cell):
+
+    if cell is None:
+        return None
+
     # Basically, the cell contents looks something like this:
     # [[[name 1]]], [[[name 2]]], name 3, [[[name 4]]], stuff
     # Go through the line removing all text that is at the 0 level of bracketing
@@ -74,9 +94,9 @@ def ExtractGohs(cell):
 # Scan a Fancy 3 page looking for a convention-series table
 # A convention-series table is the first table and the first column is "Convention"
 # Return a list of convention page names
-def FindConventionSeriesTable(conName, lines):
-    conventionColumnHeaders=["convention", "#", "con", "name"]
-    gohColumnHeaders=["goh", "gohs", "guests of honor", "guests of honour"]
+def FindConventionSeriesTable(conName, lines, redirects):
+    conventionColumnHeaders=["convention", "#", "con"]
+    gohColumnHeaders=["goh", "gohs", "guests of honor", "guests of honour", "guests"]
 
     i=0
     while i < len(lines):
@@ -107,12 +127,19 @@ def FindConventionSeriesTable(conName, lines):
         i=i+1
         if line[:2] != "||":    # Have we fallen off the bottom of the table?
             break
-        cell=WikidotHelpers.GetCellContents(line, conventionColumnNumber)
-        pageName=ExtractPageName(cell)
-        if pageName is None:
-            continue
+
         cell=WikidotHelpers.GetCellContents(line, gohColumnNumber)
         gohList=ExtractGohs(cell)   # This is a list of GoHs for this convention
+
+        cell=WikidotHelpers.GetCellContents(line, conventionColumnNumber)
+        pageNames=ExtractConventionName(cell)
+        if len(pageNames) == 0:
+            continue
+        for pageName in pageNames:
+            pageName=RedirectedPage(redirects, pageName)
+            if gohList is not None:
+                gohList=[RedirectedPage(redirects, g) for g in gohList]
+
         conventions.append((pageName, gohList))     # Making conventions a list of tuples of convention-name and goh-list
     return conventions
 
@@ -177,23 +204,29 @@ def DecodeRecognitionLine(line):
 
     recognition=[]
     for item in listitems:
-        item=item.strip()
-        m=Regex.match('^\[\[\[(.*?)\]\]\]', item)  # Look for [[[<something>[]]]. Note that we're ignoring everything after the first [[[ ]]]
+        item=item.strip().replace("  ", " ").replace("  ", " ")  # Remove leading and trailing spaces and turn all internal double spaces into a single space
+
+        # Some things to ignore
+        m=Regex.match('^[Tt]oastmaster at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
+            continue
+        m=Regex.match('^\[\[\[[Tt]oastmaster\]\]\] at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
+            continue
+        m=Regex.match('^[MmCc] at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
+            continue
+        m=Regex.match('^\[\[\[[MmCc]\]\]\] at \[\[\[(.*)\]\]\]', item)
+        if m is not None and len(m.groups()) > 0:
+            continue
+
+        # Ok, is there something left that looks like recognition?
+        m=Regex.match('^\s*\[\[\[(.*?)\]\]\]\s*', item)  # Look for [[[<something>[]]]. Note that we're ignoring everything after the first [[[ ]]]
         if m is not None and len(m.groups()) > 0:
             recognition.append((WikidotHelpers.RemoveAlias(m.groups(0)[0]), year))
             continue
-        m=Regex.match('^Toastmaster at \[\[\[(.*)\]\]\]', item)
-        if m is not None and len(m.groups()) > 0:
-            continue
-        m=Regex.match('^\[\[\[Toastmaster\]\]\] at \[\[\[(.*)\]\]\]', item)
-        if m is not None and len(m.groups()) > 0:
-            continue
-        m=Regex.match('^MC at \[\[\[(.*)\]\]\]', item)
-        if m is not None and len(m.groups()) > 0:
-            continue
-        m=Regex.match('^\[\[\[MC\]\]\] at \[\[\[(.*)\]\]\]', item)
-        if m is not None and len(m.groups()) > 0:
-            continue
+
+        # Nope.
         print(">>>>Not recognized: "+item)
     return recognition
 

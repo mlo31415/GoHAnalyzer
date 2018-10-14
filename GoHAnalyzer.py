@@ -104,9 +104,10 @@ for pageName in allPages:
         # Not all pages tagged "convention" are convention-series pages. Convention-series pages contain a convention-series table.
         # Check if this is a convention-series
         # If it's a real convention-series, we add the convention name and page name to the list of conventions
-        conlist=Fancy3Pages.FindConventionSeriesTable(pageName, lines)
+        conlist=Fancy3Pages.FindConventionSeriesTable(pageName, lines, redirects)
         if conlist is not None and len(conlist) > 0:
-            conlist=[(Fancy3Pages.RedirectedPage(redirects, c[0]), c[1]) for c in conlist]
+            # A conlist is a list of tuples
+            # Each tuple is a con name and a list of its GoHs
             conSeriesList[pageName]=conlist   # This is a list of tuples of convention-name and goh-list
         print(pageName+":  Convention: "+str(conlist))
         continue
@@ -122,12 +123,12 @@ for pageName in allPages:
 
     # Maybe it's an award?
     if "award" in tags:
-        awards.append(WikidotHelpers.Cannonicize(pageName))
+        awards.append(WikidotHelpers.Cannonicize(Fancy3Pages.RedirectedPage(redirects, pageName)))
         print(pageName+":  Award")
 
     # Or a fan fund?
-    if "fandund" in tags:
-        fanfunds.append(WikidotHelpers.Cannonicize(pageName))
+    if "fanfund" in tags:
+        fanfunds.append(WikidotHelpers.Cannonicize(Fancy3Pages.RedirectedPage(redirects, pageName)))
         print(pageName+":  Fan Fund")
 
 # OK, we've gathered the data.
@@ -143,6 +144,8 @@ for pname in people.keys():
             continue
         if conname.find("hugo") > -1 and conname.find("best") > -1:     # Drop recognitions which are Hugo-related
             continue
+        if conname[5:] == "campbell-award":     # Ignore 'xxxx Campbell Award'
+            continue
         newreclist.append(rec)
     people[pname]=newreclist
 
@@ -155,6 +158,7 @@ for pkey in people.keys():
         gohList=Fancy3Pages.LookUpGohList(conSeriesList, rec[0])
         if gohList is None:
             print("***Couldn't find "+rec[0]+ " in conSeriesList (person="+pkey+")")
+            i=0
 
 
 
