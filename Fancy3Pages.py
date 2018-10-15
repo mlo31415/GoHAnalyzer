@@ -49,7 +49,7 @@ def ExtractConventionName(cell):
     # To handle multiple names separated by / we need to do some fancy footwork.
     # There might be a '/' in a display name, so we can't just use a simple split().
     # Remove spaces in ]]] / [[[ and then turn ]/[ into ]%%[ and then split on %%
-    cell.replace("  ", " ").replace("  ", " ").replace("]]] ", "]]]").replace(" [[[", "[[[").replace("]/[", "]%%[")
+    cell=cell.replace("  ", " ").replace("  ", " ").replace("]]] ", "]]]").replace(" [[[", "[[[").replace("]/[", "]%%[")
     names=cell.split("%%")
 
     # There are two valid patterns here:
@@ -213,10 +213,10 @@ def DecodeRecognitionLine(line):
         m=Regex.match('^\[\[\[[Tt]oastmaster\]\]\] at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             continue
-        m=Regex.match('^[MmCc] at \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^[Mm][Cc] at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             continue
-        m=Regex.match('^\[\[\[[MmCc]\]\]\] at \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^\[\[\[[Mm][Cc]\]\]\] at \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             continue
 
