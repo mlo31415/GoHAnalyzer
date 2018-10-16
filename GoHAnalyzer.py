@@ -69,8 +69,10 @@ for key in redirects.keys():
             break
 
 print("***Analyzing pages...")
-# conSeriesList will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
-conSeriesList={}
+# conSeriesDict will be a dictionary.  The key will be the name of the convention series and the value will be a list of individual convention page names
+conSeriesDict={}    # This is tagged "con" and contains a convention series table
+conSingletonList=[] # *List* of paged tagged "con" which doesn't
+conSeriesSet=set()    # This will be a set containing all the individual conventions found in all the conSeries tables
 
 # people will be a dictionary. The key will be the pagename of the person and the value will be a list of recognitions
 people={}
@@ -108,9 +110,17 @@ for pageName in allPages:
         if conlist is not None and len(conlist) > 0:
             # A conlist is a list of tuples
             # Each tuple is a con name and a list of its GoHs
-            conSeriesList[pageName]=conlist   # This is a list of tuples of convention-name and goh-list
-        print(pageName+":  Convention: "+str(conlist))
+            conSeriesDict[pageName]=conlist   # This is a list of tuples of convention-name and goh-list
+            print(pageName+":  Convention series: "+str(conlist))
+            for cl in conlist:
+                conSeriesSet.add(cl[0])
+        else:
+            conSingletonList.append(pageName)
+            print(pageName+":  ConSingleton")
         continue
+
+    # Removing entries in ConSingletonList which are pointed to by ConSeries series tables
+    conSingletonList=[c for c in conSingletonList if c not in conSeriesSet]
 
     # We also want to create a list of people with their GoHships
     if "pro" in tags or "fan" in tags:
@@ -155,10 +165,11 @@ for pkey in people.keys():
     reclist=people[pkey]
     for rec in reclist:
         # A Rec is a tuple of a convention and a year
-        gohList=Fancy3Pages.LookUpGohList(conSeriesList, rec[0])
+        gohList=Fancy3Pages.LookUpGohList(conSeriesDict, rec[0])
         if gohList is None:
-            print("***Couldn't find "+rec[0]+ " in conSeriesList (person="+pkey+")")
-            i=0
+            if rec[0] not in conSingletonList:      # We can't get the GoH list for singleton cons, so ignore them for now.
+                print("***Couldn't find "+rec[0]+ " in conSeriesDict (person="+pkey+")")
+                i=0
 
 
 

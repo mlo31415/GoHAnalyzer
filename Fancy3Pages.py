@@ -207,16 +207,10 @@ def DecodeRecognitionLine(line):
         item=item.strip().replace("  ", " ").replace("  ", " ")  # Remove leading and trailing spaces and turn all internal double spaces into a single space
 
         # Some things to ignore
-        m=Regex.match('^[Tt]oastmaster at \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^(Toastmaster|toastmaster|TM|MC|mc) (at|at the) \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             continue
-        m=Regex.match('^\[\[\[[Tt]oastmaster\]\]\] at \[\[\[(.*)\]\]\]', item)
-        if m is not None and len(m.groups()) > 0:
-            continue
-        m=Regex.match('^[Mm][Cc] at \[\[\[(.*)\]\]\]', item)
-        if m is not None and len(m.groups()) > 0:
-            continue
-        m=Regex.match('^\[\[\[[Mm][Cc]\]\]\] at \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^\[\[\[(Toastmaster|toastmaster|TM|MC|mc)\]\]\] (at|at the) \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             continue
 
