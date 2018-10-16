@@ -112,7 +112,7 @@ def FindConventionSeriesTable(conName, lines, redirects):
         if conventionColumnNumber is None or gohColumnNumber is None:
             if conventionColumnNumber is None:
                 print("###### Could not find convention column in series table in page "+conName)
-            if conventionColumnNumber is None or gohColumnNumber is None:
+            if gohColumnNumber is None:
                 print("###### Could not find GoH column in series table in page "+conName)
             return None
         break
