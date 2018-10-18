@@ -161,6 +161,7 @@ for pname in people.keys():
 
 # What we want to look at now are mismatches between the list of convention GoHs and the list of recognitions
 # First we walk the list of people and make list all recognitions which are not found on the convention side
+countFailures=0
 for pkey in people.keys():
     reclist=people[pkey]
     for rec in reclist:
@@ -169,7 +170,8 @@ for pkey in people.keys():
         if gohList is None:
             if rec[0] not in conSingletonList:      # We can't get the GoH list for singleton cons, so ignore them for now.
                 print("***Couldn't find "+rec[0]+ " in conSeriesDict (person="+pkey+")")
+                countFailures=countFailures+1
                 i=0
-
+print("\n"+str(countFailures)+" lookup failures found")
 
 

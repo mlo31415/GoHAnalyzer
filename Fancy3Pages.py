@@ -125,8 +125,10 @@ def FindConventionSeriesTable(conName, lines, redirects):
     while i < len(lines):
         line=lines[i].strip()
         i=i+1
-        if line[:2] != "||":    # Have we fallen off the bottom of the table?
+        if len(line) == 0:    # A blank line says we have fallen off the bottom of the table?
             break
+        if line[:2] != "||":   # We skip lines that aren't a table row
+            continue
 
         cell=WikidotHelpers.GetCellContents(line, gohColumnNumber)
         gohList=ExtractGohs(cell)   # This is a list of GoHs for this convention
@@ -139,8 +141,7 @@ def FindConventionSeriesTable(conName, lines, redirects):
             pageName=RedirectedPage(redirects, pageName)
             if gohList is not None:
                 gohList=[RedirectedPage(redirects, g) for g in gohList]
-
-        conventions.append((pageName, gohList))     # Making conventions a list of tuples of convention-name and goh-list
+                conventions.append((pageName, gohList))     # Making conventions a list of tuples of convention-name and goh-list
     return conventions
 
 
@@ -207,12 +208,24 @@ def DecodeRecognitionLine(line):
         item=item.strip().replace("  ", " ").replace("  ", " ")  # Remove leading and trailing spaces and turn all internal double spaces into a single space
 
         # Some things to ignore
-        m=Regex.match('^(Toastmaster|toastmaster|TM|MC|mc) (at|at the) \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^(Toastmaster|toastmaster|TM|MC|mc) (at|of|at the) \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             continue
-        m=Regex.match('^\[\[\[(Toastmaster|toastmaster|TM|MC|mc)\]\]\] (at|at the) \[\[\[(.*)\]\]\]', item)
+        m=Regex.match('^\[\[\[(Toastmaster|toastmaster|TM|MC|mc)\]\]\] (at|of|at the) \[\[\[(.*)\]\]\]', item)
         if m is not None and len(m.groups()) > 0:
             continue
+
+        # Let's also skip stuff of the format [[[stuff]]] at [[[conname]]] where stuff is in a list
+        stuffList=["ghost of honor", "memorial guest", "ghost of honour", "nesfa press guest", "special guest", "interfilk guest", "filk waif", "official filk waif",
+                    "necon legend", "roastee", "featured filker", "hal clement science speaker", "honored guest", "listener guest", "isfic guest"]
+
+        m=Regex.match('^\s*\[\[\[(.*?)\]\]\] (at|of|at the) \[\[\[(.*?)\]\]\]\s*', item)
+        if m is not None and len(m.groups()) > 0:
+            stuff=m.groups()[0].lower().strip()
+            stuffList=[s.lower() for s in stuffList]
+            if stuff in stuffList:
+                recognition.append((WikidotHelpers.RemoveAlias(m.groups(1)[2]), year))
+                continue
 
         # Ok, is there something left that looks like recognition?
         m=Regex.match('^\s*\[\[\[(.*?)\]\]\]\s*', item)  # Look for [[[<something>[]]]. Note that we're ignoring everything after the first [[[ ]]]
