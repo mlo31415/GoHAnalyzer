@@ -28,11 +28,11 @@ def FindFirstCellContents(line, delimiter):
 #----------------------------------------------------------
 # Extract a single name of the form [[[name]]] or [[[name|display-name]]]
 def ExtractOneConventionName(str):
-    m=Regex.match('^\[\[\[(.+)\|(.+)\]\]\]$', str)
+    m=Regex.search('\[\[\[(.+)\|(.+)\]\]\]', str)
     if m is not None and len(m.groups()) > 0:
         return m.groups(0)[0].strip()
 
-    m=Regex.match('\[\[\[(.+)\]\]\]', str)
+    m=Regex.search('\[\[\[(.+)\]\]\]', str)
     if m is not None and len(m.groups()) > 0:
         return m.groups(0)[0].strip()
 
@@ -53,8 +53,8 @@ def ExtractConventionName(cell):
     names=cell.split("%%")
 
     # There are two valid patterns here:
-    #   [[[page-name]]]
-    #   [[[page-name|display-name]]]
+    #   [[[page-name]]] <junk>
+    #   [[[page-name|display-name]]] <junk>
     # Loop through the splits and create an output list of convention names
     connames=[ExtractOneConventionName(n) for n in names]
     return [c for c in connames if c is not None]
@@ -217,7 +217,7 @@ def DecodeRecognitionLine(line):
 
         # Let's also skip stuff of the format [[[stuff]]] at [[[conname]]] where stuff is in a list
         stuffList=["ghost of honor", "memorial guest", "ghost of honour", "nesfa press guest", "special guest", "interfilk guest", "filk waif", "official filk waif",
-                    "necon legend", "roastee", "featured filker", "hal clement science speaker", "honored guest", "listener guest", "isfic guest"]
+                    "necon legend", "roastee", "featured filker", "hal clement science speaker", "honored guest", "listener guest", "isfic guest", "memorial goh"]
 
         m=Regex.match('^\s*\[\[\[(.*?)\]\]\] (at|of|at the) \[\[\[(.*?)\]\]\]\s*', item)
         if m is not None and len(m.groups()) > 0:
